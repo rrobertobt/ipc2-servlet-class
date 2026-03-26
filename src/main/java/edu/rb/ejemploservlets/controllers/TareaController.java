@@ -40,13 +40,100 @@ public class TareaController extends HttpServlet {
                 // devolver tarea con ese ID EN FORMATO JSON
                 Tarea tarea = tareaServicio.obtenerPorId(id);
 
+                if (tarea == null) {
+                    res.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                    escribirJson(res, Map.of("error", "Tarea con ID " + id + " no encontrada"));
+                    return;
+                }
+
                 escribirJson(res, tarea);
             }
         } catch (DBException de) {
-            res.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            escribirJson(res, Map.of("error", "Tarea con ID " + id + " no encontrada"));
+            res.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            escribirJson(res, Map.of("error", "Error de base de datos: " + de.getMessage()));
         }
 
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
+        // - Leer el titulo del body (JSON)
+        // - Crear la tarea
+        // - Responder con la tarea creada en JSON
+
+        Tarea incoming = gson.fromJson(req.getReader(), Tarea.class);
+        String titulo = (incoming != null) ? incoming.getTitulo() : null;
+
+        try {
+            Tarea creada = tareaServicio.crearTarea(titulo);
+            res.setStatus(HttpServletResponse.SC_CREATED);
+            escribirJson(res, creada);
+        } catch (DBException de) {
+            res.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            escribirJson(res, Map.of("error", "Error de base de datos: " + de.getMessage()));
+        } catch (IllegalArgumentException iae) {
+            res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            escribirJson(res, Map.of("error", "Datos inválidos: " + iae.getMessage()));
+        }
+    }
+
+    @Override
+    protected void doPut(HttpServletRequest req, HttpServletResponse res) throws IOException {
+        // - Leer ID de la URL
+        // - Leer titulo y completado del body (JSON)
+        // - Actualizar la tarea
+        // - Responder con la tarea actualizada en JSON
+
+        int id = obtenerIdDeLaRuta(req);
+        if (id == -1) {
+            res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            escribirJson(res, Map.of("error", "ID inválido en la URL"));
+            return;
+        }
+
+        Tarea incoming = gson.fromJson(req.getReader(), Tarea.class);
+        String titulo = (incoming != null) ? incoming.getTitulo() : null;
+        Boolean completado = (incoming != null) ? incoming.isCompletada() : null;
+
+        try {
+            Tarea actualizada = tareaServicio.actualizarTarea(id, titulo, completado);
+
+            if (actualizada == null) {
+                res.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                escribirJson(res, Map.of("error", "Tarea con ID " + id + " no encontrada"));
+                return;
+            }
+
+            escribirJson(res, actualizada);
+        } catch (DBException de) {
+            res.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            escribirJson(res, Map.of("error", "Error de base de datos: " + de.getMessage()));
+        } catch (IllegalArgumentException iae) {
+            res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            escribirJson(res, Map.of("error", "Datos inválidos: " + iae.getMessage()));
+        }
+    }
+
+    @Override
+    protected void doDelete(HttpServletRequest req, HttpServletResponse res) throws IOException {
+        // - Leer ID de la URL
+        // - Eliminar la tarea
+        // - Responder con 204 No Content
+
+        int id = obtenerIdDeLaRuta(req);
+        if (id == -1) {
+            res.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            escribirJson(res, Map.of("error", "ID inválido en la URL"));
+            return;
+        }
+
+        try {
+            tareaServicio.eliminarTarea(id);
+            res.setStatus(HttpServletResponse.SC_NO_CONTENT);
+        } catch (DBException de) {
+            res.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            escribirJson(res, Map.of("error", "Error de base de datos: " + de.getMessage()));
+        }
     }
 
     private void escribirJson(HttpServletResponse res, Object data) throws IOException {

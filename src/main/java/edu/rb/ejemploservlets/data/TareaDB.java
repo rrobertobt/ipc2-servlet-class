@@ -3,12 +3,10 @@ package edu.rb.ejemploservlets.data;
 import edu.rb.ejemploservlets.db.DatabaseConnection;
 import edu.rb.ejemploservlets.models.Tarea;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class TareaDB {
     public List<Tarea> getAll() throws SQLException {
@@ -42,7 +40,62 @@ public class TareaDB {
                 }
             }
         }
-        return null; // o lanzar una excepción personalizada
+        return null;  // ID no encontrado
+    }
+
+    public Tarea create(String titulo) throws SQLException {
+        String sql = "INSERT INTO todos (titulo, completado) VALUES (?, 0)";
+
+        try (Connection con = DatabaseConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            ps.setString(1, titulo);
+            ps.executeUpdate();
+
+            // Obtener el ID que MySQL genero automaticamente
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) {
+                    int idGenerado = keys.getInt(1);
+                    Tarea nueva = new Tarea(idGenerado, titulo);
+                    return nueva;
+                }
+            }
+        }
+        throw new SQLException("No se pudo obtener el ID generado para la nueva tarea.");
+    }
+
+    public Tarea update(int id, String titulo, boolean completado) throws SQLException {
+        String sql = "UPDATE todos SET titulo = ?, completado = ? WHERE id = ?";
+
+        try (Connection con = DatabaseConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, titulo);
+            ps.setBoolean(2, completado);
+            ps.setInt(3, id);
+
+            int filasAfectadas = ps.executeUpdate();
+
+            if (filasAfectadas > 0) {
+                // Retornar el objeto actualizado
+                Tarea actualizado = new Tarea(id, titulo);
+                actualizado.setCompletada(completado);
+                return actualizado;
+            }
+        }
+        return null;  // ID no encontrado
+    }
+
+    public boolean delete(int id) throws SQLException {
+        String sql = "DELETE FROM todos WHERE id = ?";
+
+        try (Connection con = DatabaseConnection.getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setInt(1, id);
+            int filasAfectadas = ps.executeUpdate();
+            return filasAfectadas > 0;
+        }
     }
 
     private Tarea mapRow(ResultSet rs) throws SQLException {

@@ -25,4 +25,34 @@ public class TareaServicio {
             throw new DBException("Error al obtener tarea por ID", e);
         }
     }
+
+    public Tarea crearTarea(String titulo) {
+        if (titulo == null || titulo.trim().isEmpty()) {
+            throw new IllegalArgumentException("El título no puede estar vacío");
+        }
+        try {
+            return tareaDB.create(titulo.trim());
+        } catch (SQLException e) {
+            throw new DBException("Error al crear tarea", e);
+        }
+    }
+
+    public Tarea actualizarTarea(int id, String titulo, Boolean completado) {
+        if (titulo != null && titulo.trim().isEmpty()) {
+            throw new IllegalArgumentException("El título no puede estar vacío");
+        }
+        try {
+            return tareaDB.update(id, titulo != null ? titulo.trim() : null, completado);
+        } catch (SQLException e) {
+            throw new DBException("Error al actualizar tarea", e);
+        }
+    }
+
+    public void eliminarTarea(int id) {
+        try {
+            tareaDB.delete(id);
+        } catch (SQLException e) {
+            throw new DBException("Error al eliminar tarea", e);
+        }
+    }
 }

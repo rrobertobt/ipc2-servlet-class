@@ -11,6 +11,12 @@ public class Tarea {
         this.completada = completada;
     }
 
+    public Tarea(int id, String titulo) {
+        this.id = id;
+        this.titulo = titulo;
+        this.completada = false; // Por defecto, una nueva tarea no está completada
+    }
+
     public int getId() {
         return id;
     }
